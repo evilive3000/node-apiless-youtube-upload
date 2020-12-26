@@ -1,6 +1,6 @@
-import 'chromedriver'
-import {Builder, until, By, IWebDriverCookie } from 'selenium-webdriver'
-import { Options } from 'selenium-webdriver/chrome'
+import {path} from 'chromedriver'
+import webdriver, {Builder, until, By, IWebDriverCookie } from 'selenium-webdriver'
+import chrome, { Options } from 'selenium-webdriver/chrome'
 import fs from 'fs-extra'
 
 const GOOGLE_URL = `https://google.com`;
@@ -24,7 +24,7 @@ const validateVideoObj = (videoObj : VideoObj) => {
     if (videoObj.thumbnailPath && !fs.existsSync(videoObj.thumbnailPath)) throw new Error(`VideoObj: given thumbnailPath doesn't exist on disk (${videoObj.thumbnailPath})`)
 }
 
-export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headlessMode = true, onProgress = console.log) => {
+export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headlessMode = true, onProgress = console.log, customWebdriverPath = undefined) => {
     if (!cookies || !cookies.length) throw new Error("Can't upload video: cookies not set.")
 
     validateVideoObj(videoObj)
@@ -37,7 +37,14 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
     let chromeOptions = new Options()
     if (headlessMode) chromeOptions.addArguments('--headless')
-    let driver = await new Builder().forBrowser('chrome').setChromeOptions(chromeOptions).build()
+
+    var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
+    chrome.setDefaultService(service);
+
+    var driver = new webdriver.Builder()
+    .withCapabilities(webdriver.Capabilities.chrome())
+    .setChromeOptions(chromeOptions)
+    .build();
 
     try {
         onProgress('Settings cookies..')
@@ -134,9 +141,6 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         onProgress('Uploading..')
 
-        // Click Publish on the video
-        await (await driver.findElement(By.css("#done-button"))).click()
-
         // Wait for uploading to finish
         await new Promise((resolve, reject) => {
             // Poll progress updates
@@ -149,6 +153,9 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
                 // String that indicate finishing: "Processing HD version, SD complete", "Finished processing", "Upload complete ... Processing will begin shortly"
                 if (/\D \.\.\. \D/.test(innerHTML) || /^[^\.]+$/.test(innerHTML)) {
                     clearInterval(int)
+
+                    // Click Publish on the video
+                    await (await driver.findElement(By.css("#done-button"))).click()
 
                     onProgress('Done! (video may still be processing, but it is uploaded)')
 

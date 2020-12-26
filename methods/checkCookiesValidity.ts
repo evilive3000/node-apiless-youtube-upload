@@ -1,16 +1,23 @@
-import 'chromedriver'
-import {Builder, IWebDriverCookie } from 'selenium-webdriver'
-import { Options } from 'selenium-webdriver/chrome'
+import {path} from 'chromedriver'
+import webdriver, {Builder, IWebDriverCookie } from 'selenium-webdriver'
+import chrome, { Options } from 'selenium-webdriver/chrome'
 
 const GOOGLE_URL = `https://google.com`;
 const YOUTUBE_STUDIO_URL = `https://studio.youtube.com`;
 
-export default async (cookies : IWebDriverCookie[]) => {
+export default async (cookies : IWebDriverCookie[], customWebdriverPath = undefined) => {
     if (!cookies || !cookies.length) return false
 
     let chromeOptions = new Options()
     chromeOptions.addArguments('--headless')
-    let driver = await new Builder().forBrowser('chrome').setChromeOptions(chromeOptions).build()
+
+    var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
+    chrome.setDefaultService(service);
+
+    var driver = new webdriver.Builder()
+    .withCapabilities(webdriver.Capabilities.chrome())
+    .setChromeOptions(chromeOptions)
+    .build();
 
     try {
         // Load google page to set up cookies
