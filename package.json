@@ -1,6 +1,6 @@
 {
   "name": "node-apiless-youtube-upload",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Upload videos to Youtube in Node.js without any Youtube API dependency by using Selenium.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

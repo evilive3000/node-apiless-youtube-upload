@@ -60,7 +60,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Open Youtube Studio page
         await driver.get(YOUTUBE_STUDIO_URL);
 
-        // Wait 1000ms
+        // Wait for stuff to fully load
         await driver.sleep(1000)
 
         // Check if url is still studio.youtube.com and not accounts.google.com (which is the case if cookies are not valid / are expired)
@@ -73,7 +73,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         await driver.findElement(By.css("#upload-icon > .remove-defaults")).click()
 
         // Wait for file input to appear
-        await driver.wait(until.elementsLocated(By.css("input[type=file]")))
+        await driver.wait(until.elementsLocated(By.css("input[type=file]")), 10000)
 
         onProgress('Initializing video..')
 
@@ -81,7 +81,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         await driver.findElement(By.css("input[type=file]")).sendKeys(videoObj.videoPath)
         
         // Wait for file to upload
-        await driver.wait(until.elementsLocated(By.css("#textbox")))
+        await driver.wait(until.elementsLocated(By.css("#textbox")), 50000)
 
         // Wait for random javascript garbage to load
         await driver.sleep(7000)
@@ -115,13 +115,18 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Wait for thumbnail to load
         await driver.sleep(5000)
 
+        onProgress('Setting "not made for kids"..')
+        await (await driver.findElement(By.css("[name=NOT_MADE_FOR_KIDS]"))).click()
+
+        await driver.sleep(1000)
+
         onProgress('Setting visibility options..')
 
         // Go to visibility tab
         await (await driver.findElement(By.css("#step-title-2"))).click()
 
         // Wait for it to load
-        await driver.wait(until.elementsLocated(By.css("#privacy-radios")))
+        await driver.wait(until.elementsLocated(By.css("#privacy-radios")), 10000)
         
         // Select proper visibility setting
         var [hiddenButton, unlistedButton, publicButton] = await driver.findElements(By.css("#privacy-radios > paper-radio-button"))
