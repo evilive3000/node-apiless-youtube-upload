@@ -146,7 +146,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
             // Poll progress updates
             var int = setInterval(async () => {
                 var progressEl = await driver.findElement(By.css("ytcp-video-upload-progress > .progress-label"))
-                var innerHTML = (await progressEl.getAttribute("innerHTML")).replace(/&nbsp/g, ' ')
+                var innerHTML = (await progressEl.getText()).replace(/&nbsp/g, ' ')
                 onProgress(innerHTML)
 
                 // String that indicate uploading: "Uploading 57% ... 2 minutes left", "Uploading..", "Uploading 100% ..."
@@ -154,9 +154,12 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
                 if (/\D \.\.\. \D/.test(innerHTML) || /^[^\.]+$/.test(innerHTML)) {
                     clearInterval(int)
 
+                    onProgress("Publishing..")
+
                     // Click Publish on the video
                     await (await driver.findElement(By.css("#done-button"))).click()
 
+                    await driver.sleep(2000)
                     onProgress('Done! (video may still be processing, but it is uploaded)')
 
                     return resolve()
