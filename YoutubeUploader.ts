@@ -14,7 +14,7 @@ export default class YoutubeUploader {
     }
 
     async promptLoginAndGetCookies() {
-        this.cookies = await promptLoginAndGetCookies()
+        this.cookies = await promptLoginAndGetCookies(this.chromeDriverPath)
         return this.cookies
     }
 
