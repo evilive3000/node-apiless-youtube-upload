@@ -1,5 +1,5 @@
 import {path} from 'chromedriver'
-import webdriver, {Builder, until, By, IWebDriverCookie } from 'selenium-webdriver'
+import webdriver, {Builder, until, By, IWebDriverCookie, WebElement } from 'selenium-webdriver'
 import chrome, { Options } from 'selenium-webdriver/chrome'
 import fs from 'fs-extra'
 
@@ -11,6 +11,7 @@ export interface VideoObj {
     title: string
     thumbnailPath?: string
     description?: string
+    monetization: boolean
     visibility?: 'private' | 'unlisted' | 'public'
 }
 
@@ -32,11 +33,14 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     // Fill default values
     videoObj = {
         visibility: 'public',
+        monetization: false,
         ...videoObj
     }
 
     let chromeOptions = new Options()
     if (headlessMode) chromeOptions.addArguments('--headless')
+    // @ts-ignore
+    chromeOptions.options_["debuggerAddress"] = "127.0.0.1:6813"
 
     var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
     chrome.setDefaultService(service);
@@ -46,14 +50,66 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     .setChromeOptions(chromeOptions)
     .build();
 
+    const ensureNoSecurityWarning = async () => {
+        await driver.executeScript("if (document.querySelector('ytcp-auth-confirmation-dialog')) document.querySelector('ytcp-auth-confirmation-dialog').remove()")
+    }
+
+    const findElements = async (cssSelector : string) => {
+        var webEls = await driver.findElements(By.css(cssSelector))
+        await driver.executeScript('arguments[0].scrollIntoViewIfNeeded()', webEls[0])
+        return webEls
+    }
+
+    const findElement = async (cssSelector : string) => {
+        return (await findElements(cssSelector))[0]
+    }
+
+    const tryFindElement = async (cssSelector : string) => {
+        const elList = await driver.findElements(By.css(cssSelector))
+        if (elList.length == 0) return false
+        
+        await driver.executeScript('arguments[0].scrollIntoViewIfNeeded()', elList[0])
+        return elList[0]
+    }
+
+    const tryMonetization = async () => {
+        const monetizationTabButton = await tryFindElement('button[test-id=MONETIZATION]')
+        if (!monetizationTabButton) return onProgress('Monetization options are not available on this channel. Continuing..')
+
+        onProgress("Applying monetization settings..")
+
+        await monetizationTabButton.click()
+        await driver.sleep(500)
+
+        var isAlreadyOff = (await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog')).getAttribute('aria-selected')) === "true" ? true : false
+
+        if (isAlreadyOff && videoObj.monetization) {
+            onProgress('Setting monetization on...');
+            await (await findElement('paper-radio-button[id=radio-on][class~=ytcp-video-monetization-edit-dialog')).click();
+            await driver.sleep(500)
+            await (await findElement('ytcp-button[id=save-button][class~=ytcp-video-monetization-edit-dialog]')).click();
+        } else if (!isAlreadyOff && !videoObj.monetization) {
+            onProgress('Setting monetization off...');
+            await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog')).click();
+            await driver.sleep(500)
+            await (await findElement('ytcp-button[id=save-button][class~=ytcp-video-monetization-edit-dialog]')).click()
+        } else {
+            onProgress(`Monetization is already the desired value (${isAlreadyOff ? 'off' : 'on'})...`);
+        }
+
+        await driver.sleep(500)
+    }
+
+    var securityIgnoreInterval = null
+
     try {
         onProgress('Settings cookies..')
 
-        // Load google page to set up cookies
-        await driver.get(GOOGLE_URL)
+        // // Load google page to set up cookies
+        // await driver.get(GOOGLE_URL)
 
-        // Add cookies
-        for (let cookie of cookies) await driver.manage().addCookie(cookie)
+        // // Add cookies
+        // for (let cookie of cookies) await driver.manage().addCookie(cookie)
 
         onProgress('Opening Youtube Studio..')
 
@@ -63,6 +119,10 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Wait for stuff to fully load
         await driver.sleep(1000)
 
+        securityIgnoreInterval = setInterval(() => {
+            ensureNoSecurityWarning()
+        }, 500)
+
         // Check if url is still studio.youtube.com and not accounts.google.com (which is the case if cookies are not valid / are expired)
         var url = (await driver.getCurrentUrl())
         if (!url.includes('studio.youtube.com/')) {
@@ -70,15 +130,15 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         }
 
         // Click upload
-        await driver.findElement(By.css("#upload-icon > .remove-defaults")).click()
+        await (await findElement("#upload-icon > .remove-defaults")).click()
 
         // Wait for file input to appear
         await driver.wait(until.elementsLocated(By.css("input[type=file]")), 10000)
 
-        onProgress('Initializing video..')
+        onProgress('Initializing video..');
 
         // Enter file path
-        await driver.findElement(By.css("input[type=file]")).sendKeys(videoObj.videoPath)
+        await (await findElement("input[type=file]")).sendKeys(videoObj.videoPath)
         
         // Wait for file to upload
         await driver.wait(until.elementsLocated(By.css("#textbox")), 50000)
@@ -86,10 +146,12 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Wait for random javascript garbage to load
         await driver.sleep(7000)
 
+        var editBoxes = await findElements("#textbox")
+
         onProgress('Entering title..')
 
         // Enter title
-        var titleBox = (await driver.findElements(By.css("#textbox")))[0]
+        var titleBox = editBoxes[0]
         await titleBox.click()
         await titleBox.clear()
         await titleBox.sendKeys(videoObj.title)
@@ -97,7 +159,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         onProgress('Entering description..')
 
         // Enter Description
-        var descriptionBox = (await driver.findElements(By.css("#textbox")))[1]
+        var descriptionBox = editBoxes[1]
         await descriptionBox.click()
         await descriptionBox.clear()
         if (videoObj.description) {
@@ -108,28 +170,30 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         // Enter custom thumbnail
         if (videoObj.thumbnailPath) {
-            var thumbnailBox = await driver.findElement(By.css("#file-loader"))
+            var thumbnailBox = await findElement("#file-loader")
             await thumbnailBox.sendKeys(videoObj.thumbnailPath)
         }
 
         // Wait for thumbnail to load
         await driver.sleep(5000)
 
-        onProgress('Setting "not made for kids"..')
-        await (await driver.findElement(By.css("[name=NOT_MADE_FOR_KIDS]"))).click()
+        onProgress('Setting "not made for kids" (the only supported options right now)..')
+        await (await findElement('[name=NOT_MADE_FOR_KIDS]')).click()
 
         await driver.sleep(1000)
+
+        await tryMonetization()
 
         onProgress('Setting visibility options..')
 
         // Go to visibility tab
-        await (await driver.findElement(By.css("#step-title-2"))).click()
+        await (await findElement('button[test-id=REVIEW]')).click()
 
         // Wait for it to load
         await driver.wait(until.elementsLocated(By.css("#privacy-radios")), 10000)
         
         // Select proper visibility setting
-        var [hiddenButton, unlistedButton, publicButton] = await driver.findElements(By.css("#privacy-radios > paper-radio-button"))
+        var [hiddenButton, unlistedButton, publicButton] = await findElements("#privacy-radios > paper-radio-button")
         switch (videoObj.visibility) {
             case 'private':
                 hiddenButton.click()
@@ -150,7 +214,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         await new Promise((resolve, reject) => {
             // Poll progress updates
             var int = setInterval(async () => {
-                var progressEl = await driver.findElement(By.css("ytcp-video-upload-progress > .progress-label"))
+                var progressEl = await findElement("ytcp-video-upload-progress > .progress-label")
                 var innerHTML = (await progressEl.getText()).replace(/&nbsp/g, ' ')
                 onProgress(innerHTML)
 
@@ -162,12 +226,19 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
                     onProgress("Publishing..")
 
                     // Click Publish on the video
-                    await (await driver.findElement(By.css("#done-button"))).click()
-
+                    await (await findElement("#done-button")).click()
+                    
                     await driver.sleep(2000)
+
+                    // There is an additional confirmation, if the video is set public and monetization is enabled
+                    var confirmationMaybe = await tryFindElement('ytcp-button[id=publish-button][class~=ytcp-prechecks-warning-dialog]')
+                    if (confirmationMaybe) confirmationMaybe.click()
+
+                    await driver.sleep(1000)
+
                     onProgress('Done! (video may still be processing, but it is uploaded)')
 
-                    return resolve()
+                    return resolve(undefined)
                 }
 
 
@@ -177,6 +248,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         return null
     } finally {
+        clearInterval(securityIgnoreInterval)
         await driver.quit();
     }
 
