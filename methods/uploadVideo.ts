@@ -1,5 +1,5 @@
 import {path} from 'chromedriver'
-import webdriver, {Builder, until, By, IWebDriverCookie, WebElement } from 'selenium-webdriver'
+import webdriver, {Builder, Key, until, By, IWebDriverCookie, WebElement } from 'selenium-webdriver'
 import chrome, { Options } from 'selenium-webdriver/chrome'
 import fs from 'fs-extra'
 
@@ -34,13 +34,12 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     videoObj = {
         visibility: 'public',
         monetization: false,
+        description: '',
         ...videoObj
     }
 
     let chromeOptions = new Options()
-    if (headlessMode) chromeOptions.addArguments('--headless')
-    // @ts-ignore
-    chromeOptions.options_["debuggerAddress"] = "127.0.0.1:6813"
+    if (headlessMode) chromeOptions.addArguments('--headless', '--log-level=3')
 
     var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
     chrome.setDefaultService(service);
@@ -50,26 +49,43 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     .setChromeOptions(chromeOptions)
     .build();
 
+    const enterEmojiString = async (webElement : WebElement, string : string) => {
+        // sendKeys(string) doesn't support emojis (causes a crash)
+        // youtube custom input elements don't have "value" property (but webEl.clear() still works)
+        // clipboard hack works but not in headless mode
+        // also editing innerHTML causes racing conditions with the underlying javascript mechanism
+        // solution is to use an obsolete method document.execCommand('insreText')
+        await driver.sleep(500)
+        webElement.click()
+        await driver.sleep(250)
+        webElement.clear()
+        await driver.sleep(250)
+        await driver.executeScript(`
+        arguments[0].focus();
+        document.execCommand('insertText', false, arguments[1]);
+        `, webElement, string)
+    }
+
     const ensureNoSecurityWarning = async () => {
         await driver.executeScript("if (document.querySelector('ytcp-auth-confirmation-dialog')) document.querySelector('ytcp-auth-confirmation-dialog').remove()")
     }
 
     const findElements = async (cssSelector : string) => {
         var webEls = await driver.findElements(By.css(cssSelector))
-        await driver.executeScript('arguments[0].scrollIntoViewIfNeeded()', webEls[0])
+        if (webEls[0]) await driver.executeScript('arguments[0].scrollIntoViewIfNeeded()', webEls[0])
         return webEls
     }
 
     const findElement = async (cssSelector : string) => {
-        return (await findElements(cssSelector))[0]
+        var els = await findElements(cssSelector)
+        if (els.length === 0) throw new Error(`Element was not found with selector '${cssSelector}'`)
+        return els[0]
     }
 
     const tryFindElement = async (cssSelector : string) => {
-        const elList = await driver.findElements(By.css(cssSelector))
-        if (elList.length == 0) return false
-        
-        await driver.executeScript('arguments[0].scrollIntoViewIfNeeded()', elList[0])
-        return elList[0]
+        var els = await findElements(cssSelector)
+        if (els.length == 0) return false
+        return els[0]
     }
 
     const tryMonetization = async () => {
@@ -80,21 +96,24 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         await monetizationTabButton.click()
         await driver.sleep(500)
+        await (await findElement('ytcp-icon-button[class~=ytcp-video-monetization]')).click()
+        await driver.sleep(500)
 
-        var isAlreadyOff = (await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog')).getAttribute('aria-selected')) === "true" ? true : false
+        var isAlreadyOff = (await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog]')).getAttribute('aria-selected')) === "true" ? true : false
 
         if (isAlreadyOff && videoObj.monetization) {
             onProgress('Setting monetization on...');
-            await (await findElement('paper-radio-button[id=radio-on][class~=ytcp-video-monetization-edit-dialog')).click();
+            await (await findElement('paper-radio-button[id=radio-on][class~=ytcp-video-monetization-edit-dialog]')).click();
             await driver.sleep(500)
             await (await findElement('ytcp-button[id=save-button][class~=ytcp-video-monetization-edit-dialog]')).click();
         } else if (!isAlreadyOff && !videoObj.monetization) {
             onProgress('Setting monetization off...');
-            await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog')).click();
+            await (await findElement('paper-radio-button[id=radio-off][class~=ytcp-video-monetization-edit-dialog]')).click();
             await driver.sleep(500)
             await (await findElement('ytcp-button[id=save-button][class~=ytcp-video-monetization-edit-dialog]')).click()
         } else {
             onProgress(`Monetization is already the desired value (${isAlreadyOff ? 'off' : 'on'})...`);
+            await (await findElement('iron-overlay-backdrop[opened]')).click()
         }
 
         await driver.sleep(500)
@@ -105,11 +124,11 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     try {
         onProgress('Settings cookies..')
 
-        // // Load google page to set up cookies
-        // await driver.get(GOOGLE_URL)
+        // Load google page to set up cookies
+        await driver.get(GOOGLE_URL)
 
-        // // Add cookies
-        // for (let cookie of cookies) await driver.manage().addCookie(cookie)
+        // Add cookies
+        for (let cookie of cookies) await driver.manage().addCookie(cookie)
 
         onProgress('Opening Youtube Studio..')
 
@@ -144,7 +163,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         await driver.wait(until.elementsLocated(By.css("#textbox")), 50000)
 
         // Wait for random javascript garbage to load
-        await driver.sleep(7000)
+        await driver.sleep(10000)
 
         var editBoxes = await findElements("#textbox")
 
@@ -152,19 +171,13 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         // Enter title
         var titleBox = editBoxes[0]
-        await titleBox.click()
-        await titleBox.clear()
-        await titleBox.sendKeys(videoObj.title)
+        await enterEmojiString(titleBox, videoObj.title)
         
         onProgress('Entering description..')
 
         // Enter Description
         var descriptionBox = editBoxes[1]
-        await descriptionBox.click()
-        await descriptionBox.clear()
-        if (videoObj.description) {
-            await descriptionBox.sendKeys(videoObj.description)
-        }
+        await enterEmojiString(descriptionBox, videoObj.description)
 
         onProgress('Entering custom thumbnail..')
 
@@ -184,7 +197,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         await tryMonetization()
 
-        onProgress('Setting visibility options..')
+        onProgress(`Setting visibility option to ${videoObj.visibility}..`)
 
         // Go to visibility tab
         await (await findElement('button[test-id=REVIEW]')).click()

@@ -2,7 +2,7 @@ import {path} from 'chromedriver'
 import webdriver, {Builder, until, By, IWebDriverCookie } from 'selenium-webdriver'
 import chrome, { Options } from 'selenium-webdriver/chrome'
 
-// Google sign in url that has to be "proxied" through their API Playground, because otherwise it will complain about "unsecure browser/app"
+// Google sign in url that is "proxied" through their API Playground, because otherwise it will complain about "unsecure browser/app"
 // Credits: https://gist.github.com/ikegami-yukino/51b247080976cb41fe93#gistcomment-3455633
 const GOOGLE_SIGN_IN_PROXIED_URL = `https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?redirect_uri=https%3A%2F%2Fdevelopers.google.com%2Foauthplayground&prompt=consent&response_type=code&client_id=407408718192.apps.googleusercontent.com&scope=email&access_type=offline&flowName=GeneralOAuthFlow`;
 const GOOGLE_SIGN_IN_SUCC_URL = `https://developers.google.com/oauthplayground/`

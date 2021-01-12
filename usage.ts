@@ -11,10 +11,11 @@ import YoutubeUploader from './YoutubeUploader'
         // Upload a video to youtube
         await youtubeUploader.uploadVideo({
             videoPath: 'C:/Users/gladiatortoise/Desktop/testVideo.mp4',
-            title: 'Test Title',
-            description: 'Test Description',
+            title: '📡 Automatically Uploaded Video 📡',
+            description: 'This is a placeholder description.',
             thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
-            visibility: 'unlisted'
+            visibility: 'unlisted',
+            monetization: false
         })
     }
 
