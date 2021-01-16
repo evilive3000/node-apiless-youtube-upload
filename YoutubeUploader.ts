@@ -7,19 +7,17 @@ import {IWebDriverCookie } from 'selenium-webdriver'
 
 export default class YoutubeUploader {
     cookies : IWebDriverCookie[]
-    chromeDriverPath ?: string
 
-    constructor(chromeDriverPath ?: string) {
-        this.chromeDriverPath = chromeDriverPath
+    constructor() {
     }
 
     async promptLoginAndGetCookies() {
-        this.cookies = await promptLoginAndGetCookies(this.chromeDriverPath)
+        this.cookies = await promptLoginAndGetCookies()
         return this.cookies
     }
 
     async checkCookiesValidity() {
-        return await checkCookiesValidity(this.cookies, this.chromeDriverPath)
+        return await checkCookiesValidity(this.cookies)
     }
 
     async loadCookiesFromDisk(path : string) {
@@ -31,6 +29,6 @@ export default class YoutubeUploader {
     }
 
     async uploadVideo(videoObj: VideoObj, headlessMode?: boolean, onProgress?: (a : string) => any) {
-        return await uploadVideo(videoObj, this.cookies, headlessMode, onProgress, this.chromeDriverPath)
+        return await uploadVideo(videoObj, this.cookies, headlessMode, onProgress)
     }
 }

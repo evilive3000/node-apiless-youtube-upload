@@ -1,4 +1,4 @@
-import {path} from 'chromedriver'
+import {ensureChromedriver} from 'node-chromedriver-downloader'
 import webdriver, {Builder, Key, until, By, IWebDriverCookie, WebElement } from 'selenium-webdriver'
 import chrome, { Options } from 'selenium-webdriver/chrome'
 import fs from 'fs-extra'
@@ -25,7 +25,7 @@ const validateVideoObj = (videoObj : VideoObj) => {
     if (videoObj.thumbnailPath && !fs.existsSync(videoObj.thumbnailPath)) throw new Error(`VideoObj: given thumbnailPath doesn't exist on disk (${videoObj.thumbnailPath})`)
 }
 
-export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headlessMode = true, onProgress = console.log, customWebdriverPath = undefined) => {
+export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headlessMode = true, onProgress = console.log) => {
     if (!cookies || !cookies.length) throw new Error("Can't upload video: cookies not set.")
 
     validateVideoObj(videoObj)
@@ -41,7 +41,8 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     let chromeOptions = new Options()
     if (headlessMode) chromeOptions.addArguments('--headless', '--log-level=3')
 
-    var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
+    var webdriverPath = await ensureChromedriver()
+    var service = new chrome.ServiceBuilder(webdriverPath).build();
     chrome.setDefaultService(service);
 
     var driver = new webdriver.Builder()

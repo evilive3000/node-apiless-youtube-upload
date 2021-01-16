@@ -1,17 +1,18 @@
-import {path} from 'chromedriver'
+import {ensureChromedriver} from 'node-chromedriver-downloader'
 import webdriver, {Builder, IWebDriverCookie } from 'selenium-webdriver'
 import chrome, { Options } from 'selenium-webdriver/chrome'
 
 const GOOGLE_URL = `https://google.com`;
 const YOUTUBE_STUDIO_URL = `https://studio.youtube.com`;
 
-export default async (cookies : IWebDriverCookie[], customWebdriverPath = undefined) => {
+export default async (cookies : IWebDriverCookie[]) => {
     if (!cookies || !cookies.length) return false
 
     let chromeOptions = new Options()
     chromeOptions.addArguments('--headless')
 
-    var service = new chrome.ServiceBuilder(customWebdriverPath ? customWebdriverPath : path).build();
+    var webdriverPath = await ensureChromedriver()
+    var service = new chrome.ServiceBuilder(webdriverPath).build();
     chrome.setDefaultService(service);
 
     var driver = new webdriver.Builder()
