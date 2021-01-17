@@ -168,16 +168,20 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         var editBoxes = await findElements("#textbox")
 
-        onProgress('Entering title..')
+        onProgress('Initializing title and description..')
 
-        // Enter title
+        // Enter title and description
         var titleBox = editBoxes[0]
-        await enterEmojiString(titleBox, videoObj.title)
-        
-        onProgress('Entering description..')
-
-        // Enter Description
         var descriptionBox = editBoxes[1]
+        await enterEmojiString(titleBox, videoObj.title)
+        await enterEmojiString(descriptionBox, videoObj.description)
+        await driver.sleep(1000)
+
+        // Youtube has some weird draft mechanism that auto fills the title and description.
+        // There is already 10s sleep before this, but it seems like sometimes the draft mechanism only triggers
+        // after text is entered into the field. That's why we enter title and description twice.
+        onProgress('Confirming title and description..')
+        await enterEmojiString(titleBox, videoObj.title)
         await enterEmojiString(descriptionBox, videoObj.description)
 
         onProgress('Entering custom thumbnail..')

@@ -137,7 +137,7 @@ export default async () : Promise<IWebDriverCookie[]> => {
             await driver.get(YOUTUBE_STUDIO_URL);
 
             if (!(await driver.getCurrentUrl()).includes('studio.youtube.com/')) {
-                throw new Error("The login session could not be loaded (either user never logged in or there is a bug)")
+                throw new Error("The login session could not be loaded (either user never logged in, random lag or google account doesn't have a youtube attached)")
             }
 
             // Select youtube account (one google account might have many brand accounts)
