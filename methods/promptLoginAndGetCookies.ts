@@ -132,11 +132,14 @@ export default async () : Promise<IWebDriverCookie[]> => {
             .build();
 
             // go to google.com to trigger the saved profile to load faster
+            await driver.get('https://www.portofastoria.com/pleasewait.htm');
+            await driver.sleep(4000)
             await driver.get('https://google.com');
             // Open youtube studio to test if the login is valid
             await driver.get(YOUTUBE_STUDIO_URL);
 
-            if (!(await driver.getCurrentUrl()).includes('studio.youtube.com/')) {
+            // If cookies are valid, user is now either in Youtube Studio at studio.youtube.com, or User select page at youtube.com
+            if (!(await driver.getCurrentUrl()).includes('studio.youtube.com/') && !(await driver.getCurrentUrl()).includes('youtube.com/')) {
                 throw new Error("The login session could not be loaded (either user never logged in, random lag or google account doesn't have a youtube attached)")
             }
 

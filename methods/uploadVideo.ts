@@ -121,6 +121,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     }
 
     var securityIgnoreInterval = null
+    var successInterval = null
 
     try {
         onProgress('Settings cookies..')
@@ -160,8 +161,8 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Enter file path
         await (await findElement("input[type=file]")).sendKeys(videoObj.videoPath)
         
-        // Wait for file to upload
-        await driver.wait(until.elementsLocated(By.css("#textbox")), 50000)
+        // Wait for file metadata to upload
+        await driver.wait(until.elementsLocated(By.css("#textbox")), 10000)
 
         // Wait for random javascript garbage to load
         await driver.sleep(10000)
@@ -231,42 +232,44 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         // Wait for uploading to finish
         await new Promise((resolve, reject) => {
             // Poll progress updates
-            var int = setInterval(async () => {
-                var progressEl = await findElement("ytcp-video-upload-progress > .progress-label")
-                var innerHTML = (await progressEl.getText()).replace(/&nbsp/g, ' ')
-                onProgress(innerHTML)
+            successInterval = setInterval(async () => {
+                try {
+                    var progressEl = await findElement("ytcp-video-upload-progress > .progress-label")
+                    var innerHTML = (await progressEl.getText()).replace(/&nbsp/g, ' ')
+                    onProgress(innerHTML)
 
-                // String that indicate uploading: "Uploading 57% ... 2 minutes left", "Uploading..", "Uploading 100% ..."
-                // String that indicate finishing: "Processing HD version, SD complete", "Finished processing", "Upload complete ... Processing will begin shortly"
-                if (/\D \.\.\. \D/.test(innerHTML) || /^[^\.]+$/.test(innerHTML)) {
-                    clearInterval(int)
+                    // String that indicate uploading: "Uploading 57% ... 2 minutes left", "Uploading..", "Uploading 100% ..."
+                    // String that indicate finishing: "Processing HD version, SD complete", "Finished processing", "Upload complete ... Processing will begin shortly"
+                    if (/\D \.\.\. \D/.test(innerHTML) || /^[^\.]+$/.test(innerHTML)) {
+                        clearInterval(successInterval)
 
-                    onProgress("Publishing..")
+                        onProgress("Publishing..")
 
-                    // Click Publish on the video
-                    await (await findElement("#done-button")).click()
-                    
-                    await driver.sleep(2000)
+                        // Click Publish on the video
+                        await (await findElement("#done-button")).click()
+                        
+                        await driver.sleep(2000)
 
-                    // There is an additional confirmation, if the video is set public and monetization is enabled
-                    var confirmationMaybe = await tryFindElement('ytcp-button[id=publish-button][class~=ytcp-prechecks-warning-dialog]')
-                    if (confirmationMaybe) confirmationMaybe.click()
+                        // There is an additional confirmation, if the video is set public and monetization is enabled
+                        var confirmationMaybe = await tryFindElement('ytcp-button[id=publish-button][class~=ytcp-prechecks-warning-dialog]')
+                        if (confirmationMaybe) confirmationMaybe.click()
 
-                    await driver.sleep(1000)
+                        await driver.sleep(1000)
 
-                    onProgress('Done! (video may still be processing, but it is uploaded)')
+                        onProgress('Done! (video may still be processing, but it is uploaded)')
 
-                    return resolve(undefined)
+                        return resolve(undefined)
+                    }
+                } catch(e) {
+                    reject(e)
                 }
-
-
             }, 4000)
-        
         })
 
         return null
     } finally {
-        clearInterval(securityIgnoreInterval)
+        if (securityIgnoreInterval) clearInterval(securityIgnoreInterval)
+        if (successInterval) clearInterval(successInterval)
         await driver.quit();
     }
 
