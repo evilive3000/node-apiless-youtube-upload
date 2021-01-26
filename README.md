@@ -1,5 +1,5 @@
 # node-apiless-youtube-upload
-Upload videos to Youtube in Node.js without any Youtube API dependency. With types.
+Upload videos to Youtube in Node.js without any Youtube API dependency! Usable in ts-node, node.js and electron. Chromedriver required by Selenium will be automatically downloaded during runtime (using [node-chromedriver-downloader](https://github.com/gladiatortoise/node-chromedriver-downloader)).
 
 ##### Installation
     npm install node-apiless-youtube-upload
