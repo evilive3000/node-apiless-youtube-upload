@@ -1,37 +1,78 @@
 # node-apiless-youtube-upload
-Upload videos to Youtube in Node.js without any Youtube API dependency! Usable in ts-node, node.js and electron. Chromedriver required by Selenium will be automatically downloaded during runtime (using [node-chromedriver-downloader](https://github.com/gladiatortoise/node-chromedriver-downloader)).
+Upload videos to Youtube in Node.js without any Youtube API dependency! Usable in ts-node, node.js and electron. Chromedriver required by Selenium will be automatically downloaded during runtime (using [node-chromedriver-downloader](https://github.com/gladiatortoise/node-chromedriver-downloader)). Note: if you're looking for headless login, this is not for you.
 
 ##### Installation
     npm install node-apiless-youtube-upload
 
 ##### Usage
+
+###### ES6 Simple
 ```typescript
+import YoutubeUploader from 'node-apiless-youtube-uploader'
+
+YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
+    YoutubeUploader.uploadVideo({
+        videoPath: 'C:/Users/gladiatortoise/Desktop/testVideo.mp4',
+        title: '📡 Automatically Uploaded Video 📡',
+        description: 'This is a placeholder description.',
+        thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
+        visibility: 'unlisted',
+        monetization: false
+    }, cookies)
+})
+```
+
+###### ES6 With Saving Cookies
+```typescript
+import YoutubeUploader from 'node-apiless-youtube-uploader'
+
 (async () => {
     const youtubeUploader = new YoutubeUploader()
+    const cookiesPath = process.cwd() + '/cookies_saved.json'
 
-    // Open a login window for Google account. Cookies will be stored in the youtubeUploader instance
-    await youtubeUploader.promptLoginAndGetCookies()
-    
-    // Check if cookies are valid
-    if (await youtubeUploader.checkCookiesValidity()) {
-        // Upload a video to youtube
-        await youtubeUploader.uploadVideo({
-            videoPath: 'C:/Users/gladiatortoise/Desktop/testVideo.mp4',
-            title: '📡 Automatically Uploaded Video 📡',
-            description: 'This is a placeholder description.',
-            thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
-            visibility: 'unlisted',
-            monetization: false
-        })
+    // Try loading cookies from disk
+    try {
+        await youtubeUploader.loadCookiesFromDisk(cookiesPath)
+
+        if (!(await youtubeUploader.checkCookiesValidity())) {
+            throw new Error('Cookies loaded from disk are not valid')
+        }
+    } catch(e) {
+        console.log('Prompting Google login..')
+
+        // Open a login window for Google account. Cookies will be stored in the youtubeUploader instance
+        await youtubeUploader.promptLoginAndGetCookies()
+
+        // Save cookies
+        await youtubeUploader.saveCookiesToDisk(cookiesPath)
     }
-
-    // save cookies for later usage
-    await youtubeUploader.saveCookiesToDisk(process.cwd() + '/cookies_saved.json')
-
-    // later, cookies can be loaded like this so there's no need to repeatedly call promptLogin
-    await youtubeUploader.loadCookiesFromDisk(process.cwd() + '/cookies_saved.json')
-
+    
+    // Upload a video to youtube
+    await youtubeUploader.uploadVideo({
+        videoPath: 'C:/Users/gladiatortoise/Desktop/testVideo.mp4',
+        title: '📡 Automatically Uploaded Video 📡',
+        description: 'This is a placeholder description.',
+        thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
+        visibility: 'unlisted',
+        monetization: false
+    })
 })()
+```
+
+###### CommonJS Simple
+```typescript
+const YoutubeUploder = require('node-apiless-youtube-uploader').default
+
+YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
+    YoutubeUploader.uploadVideo({
+        videoPath: 'C:/Users/gladiatortoise/Desktop/testVideo.mp4',
+        title: '📡 Automatically Uploaded Video 📡',
+        description: 'This is a placeholder description.',
+        thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
+        visibility: 'unlisted',
+        monetization: false
+    }, cookies)
+})
 ```
 
 ##### Requirements
