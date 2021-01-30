@@ -8,7 +8,7 @@ Upload videos to Youtube in Node.js without any Youtube API dependency! Usable i
 
 ###### ES6 Simple
 ```typescript
-import YoutubeUploader from 'node-apiless-youtube-uploader'
+import YoutubeUploader from 'node-apiless-youtube-upload'
 
 YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
     YoutubeUploader.uploadVideo({
@@ -24,7 +24,7 @@ YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
 
 ###### ES6 With Saving Cookies
 ```typescript
-import YoutubeUploader from 'node-apiless-youtube-uploader'
+import YoutubeUploader from 'node-apiless-youtube-upload'
 
 (async () => {
     const youtubeUploader = new YoutubeUploader()
@@ -61,7 +61,7 @@ import YoutubeUploader from 'node-apiless-youtube-uploader'
 
 ###### CommonJS Simple
 ```typescript
-const YoutubeUploder = require('node-apiless-youtube-uploader')
+const YoutubeUploder = require('node-apiless-youtube-upload')
 
 YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
     YoutubeUploader.uploadVideo({
