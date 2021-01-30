@@ -61,7 +61,7 @@ import YoutubeUploader from 'node-apiless-youtube-upload'
 
 ###### CommonJS Simple
 ```typescript
-const YoutubeUploder = require('node-apiless-youtube-upload')
+const YoutubeUploader = require('node-apiless-youtube-upload')
 
 YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
     YoutubeUploader.uploadVideo({
