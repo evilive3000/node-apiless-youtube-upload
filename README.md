@@ -75,6 +75,8 @@ YoutubeUploader.promptLoginAndGetCookies().then(cookies => {
 })
 ```
 
+Note: On linux and macos, currently you have to close the login browser window manually after logging in succesfully (that's the first time it opens, the second time the browser opens it's controlled by selenium and will be automatically closed). 
+
 ##### Requirements
 At least node 7.6 for async/await support. Chrome web browser.
 
