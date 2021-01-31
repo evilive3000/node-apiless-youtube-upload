@@ -39,7 +39,13 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
     }
 
     let chromeOptions = new Options()
-    if (headlessMode) chromeOptions.addArguments('--headless', '--log-level=3')
+    if (headlessMode) {
+        chromeOptions.addArguments('--headless', '--log-level=3')
+        // this should cause some obscure issues with the dynamic youtube studio page
+        // like "element not interactable"
+        // not sure if some minimum size should be also applies to headfull mode, but we'll see
+        chromeOptions.windowSize({ width: 1920, height: 1080 })
+    }
 
     var webdriverPath = await ensureChromedriver()
     var service = new chrome.ServiceBuilder(webdriverPath).build();

@@ -121,7 +121,8 @@ export default async () : Promise<IWebDriverCookie[]> => {
 
             // Load the logged in profile
             chromeOptions.addArguments('--enable-automation', '--log-level=3', '--user-data-dir='+profilePath.path)
-
+            // fix linux not loading logged in profile properly (no idea why)
+            chromeOptions.excludeSwitches('password-store')
             var webdriverPath = await ensureChromedriver()
             var service = new chrome.ServiceBuilder(webdriverPath).build();
             chrome.setDefaultService(service);
