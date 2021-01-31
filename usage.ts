@@ -1,11 +1,11 @@
 import YoutubeUploader from './YoutubeUploader'
-    
-(async () => {
+
+const main = async () => {
     const youtubeUploader = new YoutubeUploader()
 
     // Open a login window for Google account. Cookies will be stored in the youtubeUploader instance
     await youtubeUploader.promptLoginAndGetCookies()
-    
+
     // Check if cookies are valid
     if (await youtubeUploader.checkCookiesValidity()) {
         // Upload a video to youtube
@@ -15,7 +15,7 @@ import YoutubeUploader from './YoutubeUploader'
             description: 'This is a placeholder description.',
             thumbnailPath: 'C:/Users/gladiatortoise/Desktop/TestThumbnail.jpg',
             visibility: 'unlisted',
-            monetization: false
+            monetization: false,
         })
     }
 
@@ -24,5 +24,6 @@ import YoutubeUploader from './YoutubeUploader'
 
     // later, cookies can be loaded like this so there's no need to repeatedly call promptLogin
     await youtubeUploader.loadCookiesFromDisk(process.cwd() + '/cookies_saved.json')
+}
 
-})()
+main().catch(console.error)
