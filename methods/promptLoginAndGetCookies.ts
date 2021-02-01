@@ -3,19 +3,10 @@ import rimraf from 'rimraf'
 import * as path from 'path'
 import * as fs from 'fs-extra'
 import {spawn} from 'child_process'
-import chrome, {Options} from 'selenium-webdriver/chrome'
-import {ensureChromedriver} from 'node-chromedriver-downloader'
 import {createTempDirectory, ITempDirectory} from 'create-temp-directory'
 import {promisify} from 'util'
-import {pid2title, URL} from '../helpers'
-import {
-    Builder,
-    Capabilities,
-    IWebDriverCookie,
-    ThenableWebDriver,
-    until,
-    WebDriver,
-} from 'selenium-webdriver'
+import {pid2title, URL, makeWebDriver} from '../helpers'
+import {IWebDriverCookie, until, WebDriver} from 'selenium-webdriver'
 
 const rimrafAsync = promisify(rimraf)
 const delayAsync = (ms: number) => new Promise((res) => setTimeout(res, ms))
@@ -39,13 +30,15 @@ const chromePreventCrashDialog = async (profilePath: string): Promise<void> => {
 }
 
 const hasNotLoggedIn = async (pid: number): Promise<boolean> => {
-    return pid2title(pid)
-        // The final destination title after a succesfull login includes '- YouTube Studio' regardless of language 
-        .then((title) => !title.includes('- YouTube Studio'))
-        .catch((e) => {
-            console.error(e)
-            return true
-        })
+    return (
+        pid2title(pid)
+            // The final destination title after a succesfull login includes '- YouTube Studio' regardless of language
+            .then((title) => !title.includes('- YouTube Studio'))
+            .catch((e) => {
+                console.error(e)
+                return true
+            })
+    )
 }
 
 const runUncontrolledChrome = async (userDataDir: string): Promise<void> => {
@@ -96,26 +89,6 @@ const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
         .catch((err) => tempDir.remove().then(() => Promise.reject(err)))
 }
 
-const makeDriver = async (userDataDir: ITempDirectory): Promise<ThenableWebDriver> => {
-    const chromeOptions = new Options()
-    // Load the logged in profile
-    chromeOptions.addArguments(
-        '--enable-automation',
-        '--log-level=3',
-        `--user-data-dir=${userDataDir.path}`,
-    )
-    // fix linux not loading logged in profile properly (no idea why)
-    chromeOptions.excludeSwitches('password-store')
-    const webdriverPath = await ensureChromedriver()
-    const service = new chrome.ServiceBuilder(webdriverPath).build()
-    chrome.setDefaultService(service)
-
-    return new Builder()
-        .withCapabilities(Capabilities.chrome())
-        .setChromeOptions(chromeOptions)
-        .build()
-}
-
 const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
     // go to google.com to trigger the saved profile to load faster
     await driver.get(URL.LOADER)
@@ -149,7 +122,7 @@ export default async (): Promise<IWebDriverCookie[]> => {
 
     try {
         profilePath = await makeLoggedInChromeProfile()
-        webDriver = await makeDriver(profilePath)
+        webDriver = await makeWebDriver({automation: true, userDataDir: profilePath.path})
         return await fetchCookies(webDriver)
     } finally {
         if (webDriver) await webDriver.quit()

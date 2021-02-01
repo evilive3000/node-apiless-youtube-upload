@@ -1,7 +1,6 @@
-import {ensureChromedriver} from 'node-chromedriver-downloader'
-import webdriver, {Builder, Key, until, By, IWebDriverCookie, WebElement } from 'selenium-webdriver'
-import chrome, { Options } from 'selenium-webdriver/chrome'
+import {until, By, IWebDriverCookie, WebElement} from 'selenium-webdriver'
 import fs from 'fs-extra'
+import {makeWebDriver} from '../helpers'
 
 const GOOGLE_URL = `https://google.com`;
 const YOUTUBE_STUDIO_URL = `https://studio.youtube.com`;
@@ -38,21 +37,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
         ...videoObj
     }
 
-    let chromeOptions = new Options()
-    if (headlessMode) chromeOptions.addArguments('--headless', '--log-level=3')
-    
-    // default size (sometimes) causes uploading page's "Done" button to be out of viewport, causing "element not interactable" error
-    // therefore here make the window size large
-    chromeOptions.windowSize({ width: 1920, height: 1080 })
-
-    var webdriverPath = await ensureChromedriver()
-    var service = new chrome.ServiceBuilder(webdriverPath).build();
-    chrome.setDefaultService(service);
-
-    var driver = new webdriver.Builder()
-    .withCapabilities(webdriver.Capabilities.chrome())
-    .setChromeOptions(chromeOptions)
-    .build();
+    const driver = await makeWebDriver({headless: headlessMode, fullsize: true})
 
     const enterEmojiString = async (webElement : WebElement, string : string) => {
         // sendKeys(string) doesn't support emojis (causes a crash)
@@ -164,7 +149,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         // Enter file path
         await (await findElement("input[type=file]")).sendKeys(videoObj.videoPath)
-        
+
         // Wait for file metadata to upload
         await driver.wait(until.elementsLocated(By.css("#textbox")), 10000)
 
@@ -214,7 +199,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
         // Wait for it to load
         await driver.wait(until.elementsLocated(By.css("#privacy-radios")), 10000)
-        
+
         // Select proper visibility setting
         var [hiddenButton, unlistedButton, publicButton] = await findElements("#privacy-radios > paper-radio-button")
         switch (videoObj.visibility) {
@@ -251,7 +236,7 @@ export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headles
 
                         // Click Publish on the video
                         await (await findElement("#done-button")).click()
-                        
+
                         await driver.sleep(2000)
 
                         // There is an additional confirmation, if the video is set public and monetization is enabled

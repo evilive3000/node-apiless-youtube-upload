@@ -1,22 +1,10 @@
-import {ensureChromedriver} from 'node-chromedriver-downloader'
-import {Builder, Capabilities, IWebDriverCookie, WebDriver} from 'selenium-webdriver'
-import chrome, {Options} from 'selenium-webdriver/chrome'
-import {URL} from '../helpers'
+import {IWebDriverCookie, WebDriver} from 'selenium-webdriver'
+import {URL, makeWebDriver} from '../helpers'
 
 export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
     if (!cookies || !cookies.length) return false
 
-    const chromeOptions = new Options()
-    chromeOptions.addArguments('--headless')
-
-    const webdriverPath = await ensureChromedriver()
-    const service = new chrome.ServiceBuilder(webdriverPath).build()
-    chrome.setDefaultService(service)
-
-    const driver = new Builder()
-        .withCapabilities(Capabilities.chrome())
-        .setChromeOptions(chromeOptions)
-        .build()
+    const driver = await makeWebDriver({headless: true})
 
     return checker(driver, cookies)
         .catch(() => false)
