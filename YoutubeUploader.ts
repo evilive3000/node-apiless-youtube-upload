@@ -6,12 +6,8 @@ import loadCookiesFromDisk from './methods/loadCookiesFromDisk'
 import {IWebDriverCookie} from 'selenium-webdriver'
 
 export default class YoutubeUploader {
-    private cookies: IWebDriverCookie[]
+    private cookies: IWebDriverCookie[] = []
 
-    constructor() {
-        this.cookies = []    
-    }
-    
     async promptLoginAndGetCookies(): Promise<IWebDriverCookie[]> {
         this.cookies = await promptLoginAndGetCookies()
         return this.cookies
@@ -29,7 +25,11 @@ export default class YoutubeUploader {
         return saveCookiesToDisk(this.cookies, path)
     }
 
-    async uploadVideo(videoObj: VideoObj, headlessMode?: boolean, onProgress?: (a: string) => any): Promise<void> {
+    async uploadVideo(
+        videoObj: VideoObj,
+        headlessMode?: boolean,
+        onProgress?: (a: string) => any,
+    ): Promise<void> {
         return uploadVideo(videoObj, this.cookies, headlessMode, onProgress)
     }
 }
