@@ -40,7 +40,8 @@ const chromePreventCrashDialog = async (profilePath: string): Promise<void> => {
 
 const hasNotLoggedIn = async (pid: number): Promise<boolean> => {
     return pid2title(pid)
-        .then((title) => !title.includes('YouTube Studio'))
+        // The final destination title after a succesfull login includes '- YouTube Studio' regardless of language 
+        .then((title) => !title.includes('- YouTube Studio'))
         .catch((e) => {
             console.error(e)
             return true
