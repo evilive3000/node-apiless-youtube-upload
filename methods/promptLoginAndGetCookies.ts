@@ -136,7 +136,8 @@ const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
 
     // Select youtube account (one google account might have many brand accounts)
     await driver.get(URL.SELECT_ACCOUNT_YOUTUBE)
-    await driver.wait(until.urlContains(URL.YOUTUBE), 60 * 1000)
+    // Wait until url matches exactly URL.YOUTUBE. Note that account selection url includes URL.YOUTUBE, which we don't want to match.
+    await driver.wait(until.urlIs(URL.YOUTUBE), 60 * 1000)
 
     return driver.manage().getCookies()
 }
