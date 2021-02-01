@@ -1,7 +1,6 @@
 import fs from 'fs-extra'
-import { IWebDriverCookie } from 'selenium-webdriver'
+import {IWebDriverCookie} from 'selenium-webdriver'
 
-export default async (cookies : IWebDriverCookie[], path : string) : Promise<undefined>  => {
-    await fs.writeJSON(path, cookies)
-    return undefined
+export default async (cookies: IWebDriverCookie[], path: string): Promise<void> => {
+    return fs.writeJSON(path, cookies)
 }

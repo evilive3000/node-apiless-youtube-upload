@@ -3,32 +3,29 @@ import checkCookiesValidity from './methods/checkCookiesValidity'
 import uploadVideo, {VideoObj} from './methods/uploadVideo'
 import saveCookiesToDisk from './methods/saveCookiesToDisk'
 import loadCookiesFromDisk from './methods/loadCookiesFromDisk'
-import {IWebDriverCookie } from 'selenium-webdriver'
+import {IWebDriverCookie} from 'selenium-webdriver'
 
 export default class YoutubeUploader {
-    cookies : IWebDriverCookie[]
+    private cookies: IWebDriverCookie[]
 
-    constructor() {
-    }
-
-    async promptLoginAndGetCookies() {
+    async promptLoginAndGetCookies(): Promise<IWebDriverCookie[]> {
         this.cookies = await promptLoginAndGetCookies()
         return this.cookies
     }
 
-    async checkCookiesValidity() {
-        return await checkCookiesValidity(this.cookies)
+    async checkCookiesValidity(): Promise<boolean> {
+        return checkCookiesValidity(this.cookies)
     }
 
-    async loadCookiesFromDisk(path : string) {
+    async loadCookiesFromDisk(path: string): Promise<void> {
         this.cookies = await loadCookiesFromDisk(path)
     }
 
-    async saveCookiesToDisk(path : string) {
-        return await saveCookiesToDisk(this.cookies, path)
+    async saveCookiesToDisk(path: string): Promise<void> {
+        return saveCookiesToDisk(this.cookies, path)
     }
 
-    async uploadVideo(videoObj: VideoObj, headlessMode?: boolean, onProgress?: (a : string) => any) {
-        return await uploadVideo(videoObj, this.cookies, headlessMode, onProgress)
+    async uploadVideo(videoObj: VideoObj, headlessMode?: boolean, onProgress?: (a: string) => any): Promise<void> {
+        return uploadVideo(videoObj, this.cookies, headlessMode, onProgress)
     }
 }

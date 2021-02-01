@@ -1,12 +1,10 @@
 import fs from 'fs-extra'
-import { IWebDriverCookie } from 'selenium-webdriver'
+import {IWebDriverCookie} from 'selenium-webdriver'
 
-export default async (path : string) : Promise<IWebDriverCookie[]> => {
-    if (!path.match(/\.json$/)) throw new Error("Tried to load cookies from file but it's not JSON format")
-    if (!fs.existsSync(path)) throw new Error("Tried to load cookies from path that doesn't exist") 
+export default async (path: string): Promise<IWebDriverCookie[]> => {
+    // no need to check if file exists, readJSON throws if it is the case
+    // no need to check for file extension, readJSON throws if JSON is broken
+    // in case of error the messages in terminal quite informative
 
-    let json = await fs.readJSON(path)
-    if (!json.length) throw new Error("Tried to load cookies but the file doesn't have data")
-
-    return json
+    return fs.readJSON(path)
 }
