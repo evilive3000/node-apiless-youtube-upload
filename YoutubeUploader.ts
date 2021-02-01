@@ -8,6 +8,10 @@ import {IWebDriverCookie} from 'selenium-webdriver'
 export default class YoutubeUploader {
     private cookies: IWebDriverCookie[]
 
+    constructor() {
+        this.cookies = []    
+    }
+    
     async promptLoginAndGetCookies(): Promise<IWebDriverCookie[]> {
         this.cookies = await promptLoginAndGetCookies()
         return this.cookies
