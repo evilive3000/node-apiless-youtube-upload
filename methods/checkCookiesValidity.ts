@@ -1,9 +1,7 @@
 import {ensureChromedriver} from 'node-chromedriver-downloader'
-import webdriver, {IWebDriverCookie, ThenableWebDriver} from 'selenium-webdriver'
+import {Builder, Capabilities, IWebDriverCookie, WebDriver} from 'selenium-webdriver'
 import chrome, {Options} from 'selenium-webdriver/chrome'
-
-const GOOGLE_URL = 'https://google.com'
-const YOUTUBE_STUDIO_URL = 'https://studio.youtube.com'
+import {URL} from '../helpers'
 
 export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
     if (!cookies || !cookies.length) return false
@@ -15,8 +13,8 @@ export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
     const service = new chrome.ServiceBuilder(webdriverPath).build()
     chrome.setDefaultService(service)
 
-    const driver = new webdriver.Builder()
-        .withCapabilities(webdriver.Capabilities.chrome())
+    const driver = new Builder()
+        .withCapabilities(Capabilities.chrome())
         .setChromeOptions(chromeOptions)
         .build()
 
@@ -25,22 +23,18 @@ export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
         .finally(() => driver.quit())
 }
 
-const checker = async (driver: ThenableWebDriver, cookies: IWebDriverCookie[]): Promise<boolean> => {
-    // Load google page to set up cookies
-    await driver.get(GOOGLE_URL)
+const checker = async (driver: WebDriver, cookies: IWebDriverCookie[]): Promise<boolean> => {
+    await driver.get(URL.GOOGLE)
 
-    // Add cookies
     for (const cookie of cookies) await driver.manage().addCookie(cookie)
 
-    // Open Youtube Studio page
-    await driver.get(YOUTUBE_STUDIO_URL)
+    await driver.get(URL.YOUTUBE_STUDIO)
 
-    // Wait 1000ms
     await driver.sleep(1000)
 
     // Check if url is still studio.youtube.com and not accounts.google.com
     // (which is the case if cookies are not valid / are expired)
     const url = await driver.getCurrentUrl()
 
-    return url.includes('studio.youtube.com/')
+    return url.includes(URL.YOUTUBE_STUDIO)
 }
