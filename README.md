@@ -75,10 +75,8 @@ promptLoginAndGetCookies().then(cookies => {
 })
 ```
 
-Note: On linux and macos, currently you have to close the login browser window manually after logging in succesfully (that's the first time it opens, the second time the browser opens it's controlled by selenium and will be automatically closed). 
-
 ##### Requirements
-At least node 7.6 for async/await support. Chrome web browser.
+At least node 7.6 for async/await support and a Chrome web browser. Unfortunately MacOs is not (yet) supported
 
 ##### Motivation
 Recent changes in Youtube v3 API (2020, September) made it impossible to upload videos from unverified apps. Google does not verify apps for internal or private use. This module is intended to be an easy solution for programmatically uploading videos to Youtube.
