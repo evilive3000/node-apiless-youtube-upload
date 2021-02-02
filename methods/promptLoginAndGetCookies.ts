@@ -1,9 +1,10 @@
 import chromeLocation from 'chrome-location'
 import rimraf from 'rimraf'
-import * as path from 'path'
-import * as fs from 'fs-extra'
+import * as Path from 'path'
+import * as fse from 'fs-extra'
+import * as fs from 'fs/promises'
+import * as os from 'os'
 import {spawn} from 'child_process'
-import {createTempDirectory, ITempDirectory} from 'create-temp-directory'
 import {promisify} from 'util'
 import {pid2title, URL, makeWebDriver} from '../helpers'
 import {IWebDriverCookie, until, WebDriver} from 'selenium-webdriver'
@@ -19,14 +20,25 @@ const isRunning = (pid: number): boolean => {
     }
 }
 
+interface ITempDirectory {
+    path: string
+    remove: () => Promise<void>
+}
+
+const createTmpDir = async (prefix: string): Promise<ITempDirectory> => {
+    const path = await fs.mkdtemp(Path.join(os.tmpdir(), prefix))
+    const remove = () => fs.rm(path, {recursive: true, force: true, maxRetries: 3})
+    return {path, remove}
+}
+
 // "Chrome didn't shut down correctly" dialog is caused by their
 // crash handler detecting the process was killed. This might be confusing
 // to the end user, so we remove it by editing profile preferences
 const chromePreventCrashDialog = async (profilePath: string): Promise<void> => {
-    const preferencesPath = path.join(profilePath, 'Default', 'Preferences')
-    const json = await fs.readJSON(preferencesPath)
+    const preferencesPath = Path.join(profilePath, 'Default', 'Preferences')
+    const json = await fse.readJSON(preferencesPath)
     json.profile.exit_type = 'Normal'
-    await fs.writeJSON(preferencesPath, json)
+    await fse.writeJSON(preferencesPath, json)
 }
 
 const hasNotLoggedIn = async (pid: number): Promise<boolean> => {
@@ -69,17 +81,17 @@ const runUncontrolledChrome = async (userDataDir: string): Promise<void> => {
 
 const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
     const modulePrefix = 'node-apiless-youtube-upload-'
-    const tempDir = await createTempDirectory(modulePrefix)
+    const tempDir = await createTmpDir(modulePrefix)
 
     // Adding a removal exit hook for tempDir is a bad idea, because it cant be
     // done synchronously for EBUSY reasons (and no async hooks I tried did not
     // work). Therefore we do a cleanup of previous runs rather than trying to
     // clean up the current one on exit
-    const {base: tmpBase, dir} = path.parse(tempDir.path)
-    for (const file of await fs.readdir(dir)) {
+    const {base: tmpBase, dir} = Path.parse(tempDir.path)
+    for (const file of await fse.readdir(dir)) {
         if (file === tmpBase || !file.startsWith(modulePrefix)) continue
 
-        const prevProfilePath = path.join(dir, file)
+        const prevProfilePath = Path.join(dir, file)
         console.log('Removing temp profile from previous run', prevProfilePath)
         await rimrafAsync(prevProfilePath).catch(console.error)
     }
