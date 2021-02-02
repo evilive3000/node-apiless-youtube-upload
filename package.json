@@ -1,6 +1,6 @@
 {
   "name": "node-apiless-youtube-upload",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Upload videos to Youtube in Node.js without any Youtube API dependency by using Selenium.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "url": "https://github.com/gladiatortoise/node-apiless-youtube-upload.git"
   },
   "keywords": [
-    "youtube", "upload", "video", "unlimited", "apiless", "selenium", "webdriver", "automated", "promise", "async", "electron", "typescript"
+    "youtube", "upload", "video", "unlimited", "apiless", "selenium", "webdriver", "automated", "promise", "async", "electron", "typescript", "linux", "windows"
   ],
   "prepare": "tsc",
   "author": "gladiatortoise",
