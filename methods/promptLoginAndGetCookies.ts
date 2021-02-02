@@ -1,15 +1,12 @@
 import chromeLocation from 'chrome-location'
-import rimraf from 'rimraf'
 import * as Path from 'path'
 import * as fse from 'fs-extra'
 import * as fs from 'fs/promises'
 import * as os from 'os'
 import {spawn} from 'child_process'
-import {promisify} from 'util'
 import {pid2title, URL, makeWebDriver} from '../helpers'
 import {IWebDriverCookie, until, WebDriver} from 'selenium-webdriver'
 
-const rimrafAsync = promisify(rimraf)
 const delayAsync = (ms: number) => new Promise((res) => setTimeout(res, ms))
 const isRunning = (pid: number): boolean => {
     try {
@@ -93,7 +90,7 @@ const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
 
         const prevProfilePath = Path.join(dir, file)
         console.log('Removing temp profile from previous run', prevProfilePath)
-        await rimrafAsync(prevProfilePath).catch(console.error)
+        await fs.rm(prevProfilePath, {recursive: true, force: true, maxRetries: 3})
     }
 
     return runUncontrolledChrome(tempDir.path)
