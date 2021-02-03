@@ -137,5 +137,3 @@ export default async (): Promise<IWebDriverCookie[]> => {
         if (profilePath) await profilePath.remove()
     }
 }
-
-export {IWebDriverCookie}
