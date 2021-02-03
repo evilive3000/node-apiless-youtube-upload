@@ -1,6 +1,5 @@
 import chromeLocation from 'chrome-location'
 import * as Path from 'path'
-import * as fse from 'fs-extra'
 import * as fs from 'fs/promises'
 import * as os from 'os'
 import {spawn} from 'child_process'
@@ -33,21 +32,21 @@ const createTmpDir = async (prefix: string): Promise<ITempDirectory> => {
 // to the end user, so we remove it by editing profile preferences
 const chromePreventCrashDialog = async (profilePath: string): Promise<void> => {
     const preferencesPath = Path.join(profilePath, 'Default', 'Preferences')
-    const json = await fse.readJSON(preferencesPath)
+    const jsonBuf = await fs.readFile(preferencesPath)
+    const json = JSON.parse(jsonBuf.toString('utf-8'))
     json.profile.exit_type = 'Normal'
-    await fse.writeJSON(preferencesPath, json)
+    await fs.writeFile(preferencesPath, JSON.stringify(json))
 }
 
 const hasNotLoggedIn = async (pid: number): Promise<boolean> => {
-    return (
-        pid2title(pid)
-            // The final destination title after a succesfull login includes '- YouTube Studio' regardless of language
-            .then((title) => !title.includes('- YouTube Studio'))
-            .catch((e) => {
-                console.error(e)
-                return true
-            })
-    )
+    // The final destination title after a successful login
+    // includes '- YouTube Studio' regardless of language
+    return pid2title(pid)
+        .then((title) => !title.includes('- YouTube Studio'))
+        .catch((e) => {
+            console.error(e)
+            return true
+        })
 }
 
 const runUncontrolledChrome = async (userDataDir: string): Promise<void> => {
@@ -85,7 +84,7 @@ const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
     // work). Therefore we do a cleanup of previous runs rather than trying to
     // clean up the current one on exit
     const {base: tmpBase, dir} = Path.parse(tempDir.path)
-    for (const file of await fse.readdir(dir)) {
+    for (const file of await fs.readdir(dir)) {
         if (file === tmpBase || !file.startsWith(modulePrefix)) continue
 
         const prevProfilePath = Path.join(dir, file)

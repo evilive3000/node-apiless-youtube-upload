@@ -1,5 +1,5 @@
 import {until, By, IWebDriverCookie, WebElement} from 'selenium-webdriver'
-import fs from 'fs-extra'
+import fs from 'fs'
 import {makeWebDriver} from '../helpers'
 
 const GOOGLE_URL = `https://google.com`;
