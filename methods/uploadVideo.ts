@@ -1,6 +1,6 @@
-import {until, By, IWebDriverCookie, WebElement} from 'selenium-webdriver'
+import {until, By, WebElement} from 'selenium-webdriver'
 import fs from 'fs'
-import {makeWebDriver} from '../helpers'
+import {Cookies, makeWebDriver} from '../helpers'
 
 const GOOGLE_URL = `https://google.com`;
 const YOUTUBE_STUDIO_URL = `https://studio.youtube.com`;
@@ -24,7 +24,7 @@ const validateVideoObj = (videoObj : VideoObj) => {
     if (videoObj.thumbnailPath && !fs.existsSync(videoObj.thumbnailPath)) throw new Error(`VideoObj: given thumbnailPath doesn't exist on disk (${videoObj.thumbnailPath})`)
 }
 
-export default async (videoObj : VideoObj, cookies : IWebDriverCookie[], headlessMode = true, onProgress = console.log) => {
+export default async (videoObj : VideoObj, cookies : Cookies, headlessMode = true, onProgress = console.log) => {
     if (!cookies || !cookies.length) throw new Error("Can't upload video: cookies not set.")
 
     validateVideoObj(videoObj)

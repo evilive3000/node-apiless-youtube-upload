@@ -3,8 +3,8 @@ import * as Path from 'path'
 import * as fs from 'fs/promises'
 import * as os from 'os'
 import {spawn} from 'child_process'
-import {pid2title, URL, makeWebDriver} from '../helpers'
-import {IWebDriverCookie, until, WebDriver} from 'selenium-webdriver'
+import {pid2title, URL, makeWebDriver, Cookies} from '../helpers'
+import {until, WebDriver} from 'selenium-webdriver'
 
 const delayAsync = (ms: number) => new Promise((res) => setTimeout(res, ms))
 const isRunning = (pid: number): boolean => {
@@ -97,7 +97,7 @@ const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
         .catch((err) => tempDir.remove().then(() => Promise.reject(err)))
 }
 
-const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
+const fetchCookies = async (driver: WebDriver): Promise<Cookies> => {
     // go to google.com to trigger the saved profile to load faster
     await driver.get(URL.LOADER)
     await driver.sleep(4000)
@@ -121,10 +121,12 @@ const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
     // Wait until url matches exactly URL.YOUTUBE. Note that account selection url includes URL.YOUTUBE, which we don't want to match.
     await driver.wait(until.urlIs(URL.YOUTUBE), 60 * 1000)
 
-    return driver.manage().getCookies()
+    const webDriverCookies = await driver.manage().getCookies()
+
+    return new Cookies(webDriverCookies)
 }
 
-export default async (): Promise<IWebDriverCookie[]> => {
+export default async (): Promise<Cookies> => {
     let profilePath: ITempDirectory
     let webDriver: WebDriver
 
