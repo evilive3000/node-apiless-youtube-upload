@@ -1,14 +1,12 @@
 import promptLoginAndGetCookies from './methods/promptLoginAndGetCookies'
 import checkCookiesValidity from './methods/checkCookiesValidity'
 import uploadVideo, {VideoObj} from './methods/uploadVideo'
-import saveCookiesToDisk from './methods/saveCookiesToDisk'
-import loadCookiesFromDisk from './methods/loadCookiesFromDisk'
-import {IWebDriverCookie} from 'selenium-webdriver'
+import {Cookies} from './helpers'
 
 export default class YoutubeUploader {
-    private cookies: IWebDriverCookie[] = []
+    private cookies: Cookies
 
-    async promptLoginAndGetCookies(): Promise<IWebDriverCookie[]> {
+    async promptLoginAndGetCookies(): Promise<Cookies> {
         this.cookies = await promptLoginAndGetCookies()
         return this.cookies
     }
@@ -18,11 +16,11 @@ export default class YoutubeUploader {
     }
 
     async loadCookiesFromDisk(path: string): Promise<void> {
-        this.cookies = await loadCookiesFromDisk(path)
+        this.cookies = Cookies.fromJSONFileSync(path)
     }
 
     async saveCookiesToDisk(path: string): Promise<void> {
-        return saveCookiesToDisk(this.cookies, path)
+        return this.cookies.saveToFileSync(path)
     }
 
     async uploadVideo(

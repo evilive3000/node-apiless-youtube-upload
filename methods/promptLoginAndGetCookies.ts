@@ -1,14 +1,11 @@
 import chromeLocation from 'chrome-location'
-import rimraf from 'rimraf'
-import * as path from 'path'
-import * as fs from 'fs-extra'
+import * as Path from 'path'
+import * as fs from 'fs/promises'
+import * as os from 'os'
 import {spawn} from 'child_process'
-import {createTempDirectory, ITempDirectory} from 'create-temp-directory'
-import {promisify} from 'util'
-import {pid2title, URL, makeWebDriver} from '../helpers'
-import {IWebDriverCookie, until, WebDriver} from 'selenium-webdriver'
+import {pid2title, URL, makeWebDriver, Cookies} from '../helpers'
+import {until, WebDriver} from 'selenium-webdriver'
 
-const rimrafAsync = promisify(rimraf)
 const delayAsync = (ms: number) => new Promise((res) => setTimeout(res, ms))
 const isRunning = (pid: number): boolean => {
     try {
@@ -19,26 +16,37 @@ const isRunning = (pid: number): boolean => {
     }
 }
 
+interface ITempDirectory {
+    path: string
+    remove: () => Promise<void>
+}
+
+const createTmpDir = async (prefix: string): Promise<ITempDirectory> => {
+    const path = await fs.mkdtemp(Path.join(os.tmpdir(), prefix))
+    const remove = () => fs.rm(path, {recursive: true, force: true, maxRetries: 3})
+    return {path, remove}
+}
+
 // "Chrome didn't shut down correctly" dialog is caused by their
 // crash handler detecting the process was killed. This might be confusing
 // to the end user, so we remove it by editing profile preferences
 const chromePreventCrashDialog = async (profilePath: string): Promise<void> => {
-    const preferencesPath = path.join(profilePath, 'Default', 'Preferences')
-    const json = await fs.readJSON(preferencesPath)
+    const preferencesPath = Path.join(profilePath, 'Default', 'Preferences')
+    const jsonBuf = await fs.readFile(preferencesPath)
+    const json = JSON.parse(jsonBuf.toString('utf-8'))
     json.profile.exit_type = 'Normal'
-    await fs.writeJSON(preferencesPath, json)
+    await fs.writeFile(preferencesPath, JSON.stringify(json))
 }
 
 const hasNotLoggedIn = async (pid: number): Promise<boolean> => {
-    return (
-        pid2title(pid)
-            // The final destination title after a succesfull login includes '- YouTube Studio' regardless of language
-            .then((title) => !title.includes('- YouTube Studio'))
-            .catch((e) => {
-                console.error(e)
-                return true
-            })
-    )
+    // The final destination title after a successful login
+    // includes '- YouTube Studio' regardless of language
+    return pid2title(pid)
+        .then((title) => !title.includes('- YouTube Studio'))
+        .catch((e) => {
+            console.error(e)
+            return true
+        })
 }
 
 const runUncontrolledChrome = async (userDataDir: string): Promise<void> => {
@@ -69,19 +77,19 @@ const runUncontrolledChrome = async (userDataDir: string): Promise<void> => {
 
 const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
     const modulePrefix = 'node-apiless-youtube-upload-'
-    const tempDir = await createTempDirectory(modulePrefix)
+    const tempDir = await createTmpDir(modulePrefix)
 
     // Adding a removal exit hook for tempDir is a bad idea, because it cant be
     // done synchronously for EBUSY reasons (and no async hooks I tried did not
     // work). Therefore we do a cleanup of previous runs rather than trying to
     // clean up the current one on exit
-    const {base: tmpBase, dir} = path.parse(tempDir.path)
+    const {base: tmpBase, dir} = Path.parse(tempDir.path)
     for (const file of await fs.readdir(dir)) {
         if (file === tmpBase || !file.startsWith(modulePrefix)) continue
 
-        const prevProfilePath = path.join(dir, file)
+        const prevProfilePath = Path.join(dir, file)
         console.log('Removing temp profile from previous run', prevProfilePath)
-        await rimrafAsync(prevProfilePath).catch(console.error)
+        await fs.rm(prevProfilePath, {recursive: true, force: true, maxRetries: 3})
     }
 
     return runUncontrolledChrome(tempDir.path)
@@ -89,7 +97,7 @@ const makeLoggedInChromeProfile = async (): Promise<ITempDirectory> => {
         .catch((err) => tempDir.remove().then(() => Promise.reject(err)))
 }
 
-const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
+const fetchCookies = async (driver: WebDriver): Promise<Cookies> => {
     // go to google.com to trigger the saved profile to load faster
     await driver.get(URL.LOADER)
     await driver.sleep(4000)
@@ -113,10 +121,12 @@ const fetchCookies = async (driver: WebDriver): Promise<IWebDriverCookie[]> => {
     // Wait until url matches exactly URL.YOUTUBE. Note that account selection url includes URL.YOUTUBE, which we don't want to match.
     await driver.wait(until.urlIs(URL.YOUTUBE), 60 * 1000)
 
-    return driver.manage().getCookies()
+    const webDriverCookies = await driver.manage().getCookies()
+
+    return new Cookies(webDriverCookies)
 }
 
-export default async (): Promise<IWebDriverCookie[]> => {
+export default async (): Promise<Cookies> => {
     let profilePath: ITempDirectory
     let webDriver: WebDriver
 
@@ -129,5 +139,3 @@ export default async (): Promise<IWebDriverCookie[]> => {
         if (profilePath) await profilePath.remove()
     }
 }
-
-export {IWebDriverCookie}

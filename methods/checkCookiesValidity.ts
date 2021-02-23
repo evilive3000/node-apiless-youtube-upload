@@ -1,7 +1,7 @@
-import {IWebDriverCookie, WebDriver} from 'selenium-webdriver'
-import {URL, makeWebDriver} from '../helpers'
+import {WebDriver} from 'selenium-webdriver'
+import {URL, makeWebDriver, Cookies} from '../helpers'
 
-export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
+export default async (cookies: Cookies): Promise<boolean> => {
     if (!cookies || !cookies.length) return false
 
     const driver = await makeWebDriver({headless: true})
@@ -11,7 +11,7 @@ export default async (cookies: IWebDriverCookie[]): Promise<boolean> => {
         .finally(() => driver.quit())
 }
 
-const checker = async (driver: WebDriver, cookies: IWebDriverCookie[]): Promise<boolean> => {
+const checker = async (driver: WebDriver, cookies: Cookies): Promise<boolean> => {
     await driver.get(URL.GOOGLE)
 
     for (const cookie of cookies) await driver.manage().addCookie(cookie)
